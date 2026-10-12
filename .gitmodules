@@ -1,14 +1,14 @@
 [submodule "external/protoncore"]
 	path = external/protoncore
-	url = ../../shared/protoncore
+	url = https://github.com/ProtonMail/protoncore_ios.git
 	tag = 36.0.3
 [submodule "external/apple-fusion"]
 	path = external/apple-fusion
-	url = ../../../tpe/apple-fusion
+	url = https://github.com/ProtonMail/apple-fusion.git
 	tag = 2.1.2
 [submodule "external/wireguard-apple"]
 	path = external/wireguard-apple
-	url = ../wireguard-apple
+	url = https://github.com/ProtonVPN/wireguard-apple.git
 	branch = release/ios
 [submodule "external/swift-cargo"]
 	path = external/swift-cargo

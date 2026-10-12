@@ -53,6 +53,9 @@ import os.log
             Logger.provider.info("Starting tunnel...")
 
             do {
+                guard try !DomainInclusionSettings.load(from: .domainUserDefaults).enabled else {
+                    throw ProTUNConfigurationError.configurationMissing
+                }
                 let uncheckedCompletion = UncheckedCompletion(completionHandler)
                 let config = try configurationFromProtocolConfiguration()
                 Task { [adapter, stateDelegate] in

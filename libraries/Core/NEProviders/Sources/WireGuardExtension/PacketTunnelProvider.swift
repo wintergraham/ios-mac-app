@@ -14,6 +14,7 @@ import Timer
 import VPNShared
 
 open class WireGuardPacketTunnelProvider: NEPacketTunnelProvider, ExtensionAPIServiceDelegate {
+    private var inclusionAddresses: [String]?
     public var dataTaskFactory: DataTaskFactory!
 
     private let timerFactory: TimerFactory
@@ -75,6 +76,24 @@ open class WireGuardPacketTunnelProvider: NEPacketTunnelProvider, ExtensionAPISe
     override open func startTunnel(options: [String: NSObject]?, completionHandler: @escaping (Error?) -> Void) {
         let activationAttemptId = options?["activationAttemptId"] as? String
         let errorNotifier = ErrorNotifier(activationAttemptId: activationAttemptId)
+
+        #if os(iOS)
+            do {
+                let inclusion = try DomainInclusionSettings.load(from: .domainUserDefaults)
+                inclusionAddresses = nil
+                if inclusion.enabled {
+                    guard tunnelProviderProtocol?.includeAllNetworks == false,
+                          tunnelProviderProtocol?.enforceRoutes == true else {
+                        throw PacketTunnelProviderError.savedProtocolConfigurationIsInvalid
+                    }
+                    inclusionAddresses = try InclusionAddressResolver.resolve(inclusion.domains)
+                }
+            } catch {
+                errorNotifier.notify(PacketTunnelProviderError.savedProtocolConfigurationIsInvalid)
+                completionHandler(error)
+                return
+            }
+        #endif
 
         #if DEBUG
             let extendedProTUNCertificates = UserDefaultsClient.getUserDefaults?.bool(forKey: "ProTUN_ExtendedCertificates") ?? false
@@ -239,7 +258,16 @@ open class WireGuardPacketTunnelProvider: NEPacketTunnelProvider, ExtensionAPISe
     override open func stopTunnel(with reason: NEProviderStopReason, completionHandler: @escaping () -> Void) {
         wg_log(.info, message: "Stopping tunnel with reason: \(reason)")
 
-        completionHandler()
+        adapter.stop { _ in completionHandler() }
+    }
+
+    override open func setTunnelNetworkSettings(_ tunnelNetworkSettings: NETunnelNetworkSettings?, completionHandler: ((Error?) -> Void)? = nil) {
+        #if os(iOS)
+            if let addresses = inclusionAddresses, let settings = tunnelNetworkSettings as? NEPacketTunnelNetworkSettings {
+                InclusionNetworkSettings.apply(addresses: addresses, to: settings)
+            }
+        #endif
+        super.setTunnelNetworkSettings(tunnelNetworkSettings, completionHandler: completionHandler)
     }
 
     override open func handleAppMessage(_ messageData: Data, completionHandler: ((Data?) -> Void)?) {

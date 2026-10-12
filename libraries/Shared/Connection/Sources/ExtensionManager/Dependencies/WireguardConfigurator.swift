@@ -100,7 +100,9 @@ extension ManagerConfigurator {
         @Dependency(\.vpnAuthenticationStorage) var authenticationStorage
 
         #if os(iOS)
-            protocolConfiguration.includeAllNetworks = connectionIntent.tunnelSettings.features.killSwitch
+            let inclusion = try DomainInclusionSettings.load(from: .domainUserDefaults)
+            protocolConfiguration.includeAllNetworks = !inclusion.enabled && connectionIntent.tunnelSettings.features.killSwitch
+            protocolConfiguration.enforceRoutes = inclusion.enabled
             protocolConfiguration.excludeLocalNetworks = connectionIntent.tunnelSettings.features.excludeLocalNetworks
         #endif
 

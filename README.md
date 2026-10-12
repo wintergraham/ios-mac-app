@@ -12,6 +12,8 @@ This project uses Swift Package Manager for all of it's dependencies. Allow Xcod
 
 ## Setup
 
+For this fork's inclusion mode, current build limitations, and iPhone installation steps, see [INSTALL-INCLUSION.md](INSTALL-INCLUSION.md).
+
 - Enable [Git LFS](https://git-lfs.github.com) on your machine
 - Clone this repository
 - Ensure you clone submodules (`git submodule init` + `git submodule update`)

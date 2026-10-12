@@ -123,6 +123,7 @@ final class SettingsViewModel {
 
         sections.append(accountSection)
         sections.append(securitySection)
+        sections.append(domainInclusionSection)
         sections.append(advancedSection)
 
         if let connectionSection {
@@ -329,7 +330,10 @@ final class SettingsViewModel {
                 cells.append(
                     .upsellableToggle(
                         title: "ProTUN",
-                        state: { .available(enabled: ffRepository.isEnabled(VPNFeatureFlagType.protun, reloadValue: true), interactive: true) },
+                        state: {
+                            let inclusionEnabled = (try? DomainInclusionSettings.load(from: .domainUserDefaults).enabled) ?? false
+                            return .available(enabled: !inclusionEnabled && ffRepository.isEnabled(VPNFeatureFlagType.protun, reloadValue: true), interactive: !inclusionEnabled)
+                        },
                         upsell: {},
                         handler: { isOn, callback in
                             ffRepository.setFlagOverride(VPNFeatureFlagType.protun, isOn)
@@ -365,7 +369,10 @@ final class SettingsViewModel {
 
         cells.append(.upsellableToggle(
             title: Localizable.killSwitch,
-            state: { [unowned self] in .available(enabled: propertiesManager.killSwitch, interactive: true) },
+            state: { [unowned self] in
+                let inclusionEnabled = (try? DomainInclusionSettings.load(from: .domainUserDefaults).enabled) ?? false
+                return .available(enabled: !inclusionEnabled && propertiesManager.killSwitch, interactive: !inclusionEnabled)
+            },
             upsell: {
                 // No Upsell: Kill Switch is a free feature
             },
@@ -374,6 +381,23 @@ final class SettingsViewModel {
         cells.append(.tooltip(text: Localizable.killSwitchTooltip))
 
         return TableViewSection(title: Localizable.securityOptions, cells: cells)
+    }
+
+    private var domainInclusionSection: TableViewSection {
+        let settings = try? DomainInclusionSettings.load(from: .domainUserDefaults)
+        return TableViewSection(title: "VPN inclusion", cells: [
+            .pushKeyValue(key: "Route only listed hosts", value: settings?.enabled == true ? "On" : "Off", handler: { [weak self] in
+                guard let self else { return }
+                let view = DomainInclusionView { [weak self] settings in
+                    guard let self else { return }
+                    try await settingsClient.disconnect()
+                    if settings.enabled { propertiesManager.killSwitch = false }
+                    try settings.save(to: .domainUserDefaults)
+                    reloadNeeded?()
+                }
+                push(viewController: ShowingNavigationBarUIHostingController(rootView: AnyView(view)))
+            }),
+        ])
     }
 
     private var netShieldCells: [TableViewCellModel] {

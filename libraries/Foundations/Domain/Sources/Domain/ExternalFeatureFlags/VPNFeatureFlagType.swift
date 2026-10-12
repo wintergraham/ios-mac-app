@@ -79,7 +79,8 @@ public extension FeatureFlagsRepository {
 
     var isProTUNEnabled: Bool {
         #if os(iOS) && DEBUG
-            isEnabled(VPNFeatureFlagType.protun)
+            // Inclusion routes are implemented only by the legacy WireGuard extension.
+            return (try? DomainInclusionSettings.load(from: .domainUserDefaults).enabled) != true && isEnabled(VPNFeatureFlagType.protun)
         #else
             return false
         #endif
